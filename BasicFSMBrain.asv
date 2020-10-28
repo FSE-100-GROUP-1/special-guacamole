@@ -1,0 +1,60 @@
+classdef BasicFSMBrain
+    properties
+        % Initialize basic data structures for car behavior
+        brick %the originally initialized EV3 brick object
+        states %list of enumerated states
+        currentState %current state, element of 'states'
+        speed %speed of motor rotation
+        
+        map %2d array of 1x1 cm tiles, mapped by ultrasonic sensor
+        mapPosition %the bricks position in its mental map
+        mapMax %maximum size of the map
+        rotation %approx rotation where initial is 0 degrees
+    end
+    methods
+        %Constructor
+        function obj = BasicFSMBrain(brick)
+            obj.brick = brick;
+            obj.states = ["IDLE", "FWD", "BACK", "CW", "CCW"];
+            obj.currentState = obj.states(1);
+            obj.speed = 30;
+            obj.mapMax = 1024; %if we get a map bigger than 30 ft then lol
+            obj.map = zeros(obj.mapMax, obj.mapMax);
+            obj.mapPosition = [obj.mapMax / 2, obj.mapMax / 2]; %start in center
+            obj.brick.SetColorMode(3,2)
+        end
+        
+        %Update Motor Behavior based on currentState
+        function s = SetMotors(obj, state)
+            s = true;
+            if(strcmp(state, "IDLE") == 1)
+                obj.brick.StopAllMotors();
+            elseif(strcmp(state, "FWD") == 1)
+                obj.brick.MoveMotor('AB', obj.speed);
+            elseif(strcmp(state, "BACK") == 1)
+                obj.brick.StopAllMotors();
+            elseif(strcmp(state, "CW") == 1)
+                obj.brick.StopAllMotors();
+            elseif(strcmp(state, "CCW") == 1)
+                obj.brick.StopAllMotors();
+            else
+                s = false;
+            end
+        end
+        
+        function s = UpdateMap(obj)
+            s = obj.brick.UltrasonicDist('D');
+            mapX = obj.mapPosition(1) + (cos(obj.rotation) * s
+            obj.map()
+            
+        end
+        
+        %function s = PollSensors(obj)
+        %    s = true;
+        %    (touchL, touchR, color) = (obj.brick.TouchPressed(1), 
+        %                                obj.brick.TouchPressed(2),
+        %                                obj.brick.ColorCode(3));
+        %end
+    end
+end
+
