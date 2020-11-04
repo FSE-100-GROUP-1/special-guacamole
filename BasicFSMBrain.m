@@ -25,7 +25,7 @@ classdef BasicFSMBrain < handle
             obj.states = ["IDLE", "FWD", "BACK", "CW", "CCW"];
             obj.currentState = obj.states(1);
             obj.speed = 30;
-            obj.mapMax = 48; %temp val, get info on specs
+            obj.mapMax = 64; %temp val, get info on specs
             obj.map = zeros(obj.mapMax, obj.mapMax);
             obj.mapPosition = [obj.mapMax / 2, obj.mapMax / 2]; %start in center
             obj.rotation = 0; %init to zero
@@ -38,7 +38,7 @@ classdef BasicFSMBrain < handle
             if(strcmp(state, "IDLE") == 1)
                 obj.brick.StopAllMotors();
             elseif(strcmp(state, "FWD") == 1)
-                obj.brick.MoveMotor('AB', -1 * obj.speed);
+                obj.brick.MoveMotor('AB', obj.speed);
             elseif(strcmp(state, "BACK") == 1)
                 obj.brick.StopAllMotors();
             elseif(strcmp(state, "CW") == 1)
@@ -59,7 +59,9 @@ classdef BasicFSMBrain < handle
                for ii=1:(s-1)
                    tempX = floor(obj.mapPosition(1) + (cos(obj.rotation) * ii));
                    tempY = floor(obj.mapPosition(2) + (sin(obj.rotation) * ii));
-                   obj.map(tempX,tempY)=2; %its an unknown open space!
+                   if(obj.map(tempX,tempY) == 0)
+                        obj.map(tempX,tempY)=2; %its an unknown open space!
+                   end
                end
             end
             s = [mapX mapY obj.map(mapX, mapY)];
@@ -67,23 +69,25 @@ classdef BasicFSMBrain < handle
         
         function s = RotateIncrement(obj)
            s = true;
-           obj.brick.MoveMotorAngleRel('A', 30, 388, 'Brake')
-           %obj.brick.MoveMotorAngleRel('B', 30, -10, 'Brake')
-           obj.brick.WaitForMotor('A')
+           obj.brick.MoveMotorAngleRel('A', 45, 46, 'Brake')
+           obj.brick.MoveMotorAngleRel('B', -45, 46, 'Brake')
+           obj.brick.WaitForMotor('AB')
         end
         
         function s = PollUltrasonic(obj)
            s = true;
-           for ii=0:20
-              obj.UpdateMap()
-              obj.RotateIncrement()
+           
+           for ii=0:72
+              disp(ii)
+              obj.UpdateMap();
+              obj.RotateIncrement();
            end
         end
         
         function s = LiftClaw(obj)
            s = true;
-           obj.brick.MoveMotor('C', 50)
-           obj.brick.WaitForMotor('C')
+           obj.brick.MoveMotorAngleAbs('C', 100, 20, 'Brake');
+           obj.brick.WaitForMotor('C');
         end
         
         %function s = PollSensors(obj)
@@ -92,6 +96,72 @@ classdef BasicFSMBrain < handle
         %                                obj.brick.TouchPressed(2),
         %                                obj.brick.ColorCode(3));
         %end
+        
+        function s = ManualControl(obj)
+           s = true;
+           turbo = false;
+           claw=false;
+           global key;
+           InitKeyboard();
+           while 1
+              pause(0.1);
+              switch key
+                  case 't' %toggle turbo
+                      pause(0.5)
+                      if(turbo)
+                          turbo=false;
+                      else
+                          turbo=true;
+                      end
+                      disp(turbo)
+                  case 'w' %forward
+                      if(turbo)
+                          obj.brick.MoveMotor('AB', 100);
+                      else
+                          obj.brick.MoveMotor('AB', 20);
+                      end
+                      pause(1);
+                      obj.brick.StopMotor('AB', 'Coast')
+                  case 's' %backward
+                      if(turbo)
+                          obj.brick.MoveMotor('AB', -100);
+                      else
+                          obj.brick.MoveMotor('AB', -20);
+                      end
+                      pause(1);
+                      obj.brick.StopMotor('AB', 'Coast')
+                  case 'a' %rotate ccw
+                      obj.brick.MoveMotor('A', -20);
+                      obj.brick.MoveMotor('B', 20);
+                      pause(1);
+                      obj.brick.StopMotor('AB', 'Coast')
+                  case 'd' %rotate ccw
+                      obj.brick.MoveMotor('A', 20);
+                      obj.brick.MoveMotor('B', -20);
+                      pause(1);
+                      obj.brick.StopMotor('AB', 'Coast')
+                  case 'space' %the claw
+                      if(claw)
+                          claw=false
+                          obj.brick.MoveMotor('C', -100);
+                          pause(2.5);
+                          obj.brick.StopMotor('C', 'Brake')
+                      else
+                          claw=true
+                          obj.brick.MoveMotor('C', 100);
+                          pause(3.5);
+                          obj.brick.StopMotor('C', 'Brake')
+                          obj.brick.MoveMotor('C', 20);
+                      end
+                  case 'q' %quit
+                      obj.brick.StopMotor('AB', 'Coast')
+                      obj.brick.StopMotor('C', 'Brake')
+                      break;
+              end
+           end
+           CloseKeyboard();
+        end
+        
     end
 end
 
